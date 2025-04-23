@@ -19,7 +19,6 @@ CORS(app)
 db = Database()
 
 # Initialize the database tables
-@app.before_first_request
 def init_db():
     db.create_tables()
     # Create default positions if they don't exist
@@ -47,6 +46,10 @@ def init_db():
         ]
         for position in default_positions:
             db.create_position(position)
+
+# Initialize database when app starts
+with app.app_context():
+    init_db()
 
 # Routes
 @app.route('/api/candidates', methods=['GET'])
