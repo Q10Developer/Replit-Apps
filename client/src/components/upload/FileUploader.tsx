@@ -85,37 +85,13 @@ const FileUploader = ({ maxSizeMB = 10 }: FileUploaderProps) => {
 
       setIsUploading(true);
       
-      // Simulate progress
-      const progressInterval = setInterval(() => {
-        setUploadProgress((prevProgress) => {
-          if (prevProgress >= 90) {
-            clearInterval(progressInterval);
-            return prevProgress;
-          }
-          return prevProgress + 10;
-        });
-      }, 300);
-      
       try {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("position", selectedPosition);
-        
-        const response = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-          credentials: "include",
-        });
-        
-        clearInterval(progressInterval);
-        
-        if (!response.ok) {
-          throw new Error(`Upload failed: ${response.status}`);
-        }
-        
-        setUploadProgress(100);
-        
-        const result = await response.json();
+        // Use the new Python API upload function
+        const result = await uploadCsvToProcess(
+          file, 
+          selectedPosition,
+          (progress) => setUploadProgress(progress)
+        );
         
         // Reset after successful upload
         setTimeout(() => {
@@ -126,7 +102,6 @@ const FileUploader = ({ maxSizeMB = 10 }: FileUploaderProps) => {
         
         return result;
       } catch (error) {
-        clearInterval(progressInterval);
         setUploadProgress(0);
         setIsUploading(false);
         throw error;
@@ -135,13 +110,14 @@ const FileUploader = ({ maxSizeMB = 10 }: FileUploaderProps) => {
     onSuccess: () => {
       toast({
         title: "Upload successful",
-        description: "CVs processed successfully!",
+        description: "CVs processed successfully by Python backend!",
       });
       
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/candidates'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stats'] });
       queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/uploads'] });
     },
     onError: (error) => {
       toast({
