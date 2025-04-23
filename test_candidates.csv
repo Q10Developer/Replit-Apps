@@ -1,0 +1,4 @@
+name,email,skills,experience
+"John Smith","john.smith@example.com","JavaScript,React,TypeScript","TechCorp|Senior Frontend Developer|3"
+"Emily Johnson","emily.j@example.com","Python,Flask,SQL","DataCo|Backend Developer|2;StartupX|Junior Developer|1"
+"Michael Chen","m.chen@example.com","JavaScript,React,Vue,NodeJS","WebAgency|Full Stack Developer|4"
