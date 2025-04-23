@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import multer from "multer";
 import { parse } from "csv-parse";
 import { Readable } from "stream";
+import { createProxyMiddleware } from 'http-proxy-middleware';
 import {
   candidateStatusEnum,
   csvRowSchema,
@@ -72,6 +73,16 @@ async function parseCSV(csvString: string): Promise<CSVRow[]> {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup proxy middleware to the Flask server
+  app.use('/python-api', createProxyMiddleware({
+    target: 'http://localhost:5001',
+    changeOrigin: true,
+    pathRewrite: {
+      '^/python-api': '/api', // rewrite path
+    },
+    logLevel: 'debug'
+  }));
+
   // Setup middleware for file uploads
   const upload = multer({ 
     storage: multer.memoryStorage(),
