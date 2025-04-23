@@ -364,11 +364,17 @@ class Database:
     def get_position_by_id(self, id):
         """Get a position by ID."""
         try:
+            print(f"Fetching position with ID: {id}")
             self.cursor.execute("SELECT * FROM positions WHERE id = %s", (id,))
             row = self.cursor.fetchone()
-            return self._convert_from_db_row(row)
+            print(f"Query result: {row}")
+            result = self._convert_from_db_row(row)
+            print(f"Converted result: {result}")
+            return result
         except Exception as e:
             print(f"Error getting position: {e}")
+            import traceback
+            traceback.print_exc()
             return None
     
     def get_position_by_title(self, title):
@@ -391,19 +397,32 @@ class Database:
             fields = ", ".join(data.keys())
             placeholders = ", ".join(["%s"] * len(data))
             
-            query = f"INSERT INTO positions ({fields}) VALUES ({placeholders})"
+            # PostgreSQL needs RETURNING id to get the last inserted ID
+            if self.use_postgres:
+                query = f"INSERT INTO positions ({fields}) VALUES ({placeholders}) RETURNING id"
+                self.cursor.execute(query, tuple(data.values()))
+                result = self.cursor.fetchone()
+                position_id = result['id'] if result else None
+            else:
+                # MySQL or SQLite
+                query = f"INSERT INTO positions ({fields}) VALUES ({placeholders})"
+                self.cursor.execute(query, tuple(data.values()))
+                position_id = self.cursor.lastrowid
             
-            # Execute the query
-            self.cursor.execute(query, tuple(data.values()))
             self.conn.commit()
             
-            # Get the inserted ID
-            position_id = self.cursor.lastrowid
+            # Log for debugging
+            print(f"Inserted position with ID: {position_id}")
             
             # Return the created position
-            return self.get_position_by_id(position_id)
+            if position_id:
+                pos = self.get_position_by_id(position_id)
+                print(f"Retrieved position: {pos}")
+                return pos
+            return None
         except Exception as e:
             print(f"Error creating position: {e}")
+            self.conn.rollback()
             return None
     
     # Upload operations
