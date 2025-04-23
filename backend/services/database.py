@@ -1,4 +1,3 @@
-import mysql.connector
 import json
 import os
 from datetime import datetime
@@ -9,14 +8,6 @@ load_dotenv()
 
 class Database:
     def __init__(self):
-        # Get database configuration from environment variables
-        self.config = {
-            'host': os.getenv('DB_HOST', 'localhost'),
-            'user': os.getenv('DB_USER', 'root'),
-            'password': os.getenv('DB_PASSWORD', ''),
-            'database': os.getenv('DB_NAME', 'cv_smart_hire')
-        }
-        
         # Handle the case where we have a DATABASE_URL (like on Replit)
         db_url = os.getenv('DATABASE_URL')
         if db_url:
@@ -24,6 +15,13 @@ class Database:
             self.use_postgres = True
             self.db_url = db_url
         else:
+            # MySQL configuration if no PostgreSQL URL is available
+            self.config = {
+                'host': os.getenv('DB_HOST', 'localhost'),
+                'user': os.getenv('DB_USER', 'root'),
+                'password': os.getenv('DB_PASSWORD', ''),
+                'database': os.getenv('DB_NAME', 'cv_smart_hire')
+            }
             self.use_postgres = False
         
         # Create connection
@@ -34,20 +32,30 @@ class Database:
         try:
             if self.use_postgres:
                 import psycopg2
+                import psycopg2.extras
                 self.conn = psycopg2.connect(self.db_url)
+                self.cursor = self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+                return True
             else:
-                self.conn = mysql.connector.connect(**self.config)
-            self.cursor = self.conn.cursor(dictionary=True)
-            return True
+                # MySQL connection - only used if PostgreSQL is not available
+                try:
+                    import mysql.connector
+                    self.conn = mysql.connector.connect(**self.config)
+                    self.cursor = self.conn.cursor(dictionary=True)
+                    return True
+                except ImportError:
+                    print("MySQL connector not available, falling back to SQLite")
+                    raise Exception("MySQL connector not available")
         except Exception as e:
             print(f"Error connecting to database: {e}")
-            # If MySQL fails, create an in-memory SQLite database as fallback
+            # If all else fails, create an in-memory SQLite database as fallback
             import sqlite3
             self.conn = sqlite3.connect(':memory:')
             self.conn.row_factory = sqlite3.Row
             self.cursor = self.conn.cursor()
             self.use_postgres = False
             self.use_sqlite = True
+            print("Using SQLite in-memory database as fallback")
             return False
     
     def create_tables(self):
